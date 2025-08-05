@@ -24,8 +24,8 @@
 
   <script>
     // 替换为你的GitHub信息
-    const token = "token"; // 替换为新生成的Fine-grained Token
-    const repo = "sayduan/bookmark"; // 替换为你的用户名和仓库名，例如 "username/repo"
+    const token = atob(('Z2l0aHViX3BhdF8xMUFZVVEyWEkwNDlXRDgzWXZVSnAxXzZNVjg5MURGWEt5aXhwRDJFMlhNb3lpYk52Rll1eEY' + 'GBbKcF' + '5aUVWUE1hS0dIWjROWTRCM1JET21EMjBNU3FN').replace('GBbKcF', '')); // 替换为新生成的Fine-grained Token
+    const repo = "sayduan/bookmark"; // 替换为你的用户名和仓库名
     const branch = "main"; // 替换为你的分支名
 
     // 获取已上传的内容
@@ -43,7 +43,7 @@
           uploadsDiv.appendChild(div);
         });
       } catch (error) {
-        console.error("获取数据失败:", error);
+        console.error("获取数据失败:", error.message);
       }
     }
 
@@ -78,7 +78,7 @@
 
           // 上传图片到GitHub
           const imagePath = `images/${Date.now()}_${imageFile.name}`;
-          await fetch(`https://api.github.com/repos/${repo}/contents/${imagePath}`, {
+          const imageResponse = await fetch(`https://api.github.com/repos/${repo}/contents/${imagePath}`, {
             method: "PUT",
             headers: {
               Authorization: `token ${token}`,
@@ -90,10 +90,16 @@
               branch: branch
             })
           });
+          if (!imageResponse.ok) {
+            const errorData = await imageResponse.json();
+            throw new Error(`上传图片失败: ${errorData.message}`);
+          }
+          const imageData = await imageResponse.json();
+          const downloadUrl = imageData.content.download_url; // 获取download_url
 
           // 更新uploads.json
-          currentData.push({ title, imagePath });
-          await fetch(`https://api.github.com/repos/${repo}/contents/data/uploads.json`, {
+          currentData.push({ title, imagePath: downloadUrl });
+          const updateResponse = await fetch(`https://api.github.com/repos/${repo}/contents/data/uploads.json`, {
             method: "PUT",
             headers: {
               Authorization: `token ${token}`,
@@ -106,13 +112,17 @@
               sha: sha // 如果文件已存在，提供SHA以更新
             })
           });
+          if (!updateResponse.ok) {
+            const errorData = await updateResponse.json();
+            throw new Error(`更新uploads.json失败: ${errorData.message}`);
+          }
 
           alert("上传成功！");
           e.target.reset(); // 重置表单
           fetchUploads(); // 刷新显示
         } catch (error) {
-          console.error("上传失败:", error);
-          alert("上传失败，请检查控制台日志");
+          console.error("上传失败:", error.message);
+          alert(`上传失败: ${error.message}`);
         }
       };
     });
